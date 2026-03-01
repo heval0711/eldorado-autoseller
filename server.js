@@ -25,14 +25,32 @@ app.get('/api/prices', async (req, res) => {
     try {
         console.log('📥 Incoming request params:', req.query);
         
+        // Build proper Eldorado query
+        const eldoradoQuery = {
+            // Required: Game and Category
+            game: 'steal-a-brainrot',
+            category: 'items',
+            
+            // Item filters
+            itemName: req.query.brainrotName,
+            
+            // Optional filters (only add if provided)
+            ...(req.query.mutation && req.query.mutation !== 'None' && { mutation: req.query.mutation }),
+            ...(req.query.rarity && { rarity: req.query.rarity }),
+            
+            // Sorting
+            sortBy: 'price',
+            sortOrder: 'asc'
+        };
+        
         // Clean up msRange - remove spaces
-        const cleanedQuery = { ...req.query };
-        if (cleanedQuery.msRange) {
-            cleanedQuery.msRange = cleanedQuery.msRange.replace(/\s+/g, '');
-            console.log('🧹 Cleaned msRange:', cleanedQuery.msRange);
+        if (req.query.msRange) {
+            eldoradoQuery.msRange = req.query.msRange.replace(/\s+/g, '');
         }
         
-        const queryParams = new URLSearchParams(cleanedQuery).toString();
+        console.log('🔧 Eldorado query:', eldoradoQuery);
+        
+        const queryParams = new URLSearchParams(eldoradoQuery).toString();
         const url = `https://eldorado.gg/api/flexibleOffers?${queryParams}`;
         
         console.log('🌐 Fetching from Eldorado:', url);
