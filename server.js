@@ -25,27 +25,35 @@ app.get('/api/prices', async (req, res) => {
     try {
         console.log('📥 Incoming request params:', req.query);
         
-        // Build proper Eldorado query
+        // Build Eldorado query with CORRECT parameters
         const eldoradoQuery = {
-            // Required: Game and Category
-            game: 'steal-a-brainrot',
-            category: 'items',
-            
-            // Item filters
-            itemName: req.query.brainrotName,
-            
-            // Optional filters (only add if provided)
-            ...(req.query.mutation && req.query.mutation !== 'None' && { mutation: req.query.mutation }),
-            ...(req.query.rarity && { rarity: req.query.rarity }),
+            // Item name
+            te_v2: req.query.brainrotName,
             
             // Sorting
-            sortBy: 'price',
-            sortOrder: 'asc'
+            offerSortingCriterion: 'Price',
+            isAscending: 'true',
+            
+            // Pagination
+            gamePageOfferIndex: 1,
+            gamePageOfferSize: 24
         };
         
-        // Clean up msRange - remove spaces
+        // M/s range with Eldorado's format: "50-99-ms" not "50-99 M/s"
         if (req.query.msRange) {
-            eldoradoQuery.msRange = req.query.msRange.replace(/\s+/g, '');
+            // Convert "50-99 M/s" to "50-99-ms"
+            const msValue = req.query.msRange.replace(/\s+/g, '').replace('M/s', '-ms');
+            eldoradoQuery['steal-a-brainrot-ms'] = msValue;
+        }
+        
+        // Add mutation if provided and not "None"
+        if (req.query.mutation && req.query.mutation !== 'None') {
+            eldoradoQuery['steal-a-brainrot-mutation'] = req.query.mutation;
+        }
+        
+        // Add rarity if provided
+        if (req.query.rarity) {
+            eldoradoQuery['steal-a-brainrot-rarity'] = req.query.rarity;
         }
         
         console.log('🔧 Eldorado query:', eldoradoQuery);
@@ -60,7 +68,7 @@ app.get('/api/prices', async (req, res) => {
             method: 'GET',
             headers: {
                 'Accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             }
         });
         
@@ -69,7 +77,9 @@ app.get('/api/prices', async (req, res) => {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('❌ Eldorado error response:', errorText);
-            throw new Error(`Eldorado API returned ${response.status}`);
+            
+            // Return empty offers if fails
+            return res.json({ offers: [], total: 0 });
         }
         
         const data = await response.json();
@@ -79,10 +89,7 @@ app.get('/api/prices', async (req, res) => {
         
     } catch (error) {
         console.error('💥 Price fetch error:', error.message);
-        res.status(500).json({
-            error: error.message,
-            details: 'Failed to fetch prices from Eldorado'
-        });
+        res.json({ offers: [], total: 0, error: error.message });
     }
 });
 
