@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "CORS proxy for Eldorado Auto-Seller",
   "main": "server.js",
-  "type": "module",
   "scripts": {
     "start": "node server.js"
   },
