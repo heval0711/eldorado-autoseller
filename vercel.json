@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "**/*.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "**/*.css",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "**/*.js",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
+```
+
+### **4. Commit:**
+
+Klick **"Commit new file"**
+
+---
+
+## ✅ **ALLE 4 DATEIEN FERTIG!** 🎉
+
+Jetzt solltest du auf deiner Repository Seite sehen:
+```
+✅ index.html
+✅ style.css
+✅ script.js
+✅ vercel.json
