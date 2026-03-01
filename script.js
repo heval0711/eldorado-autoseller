@@ -5,8 +5,11 @@
 // ===== CONFIGURATION =====
 const CONFIG = {
     // Production Mode Toggle
-    production: false,
-    useBackendProxy: false,
+    production: true, // ✅ PRODUCTION MODE!
+    useBackendProxy: true, // ✅ BACKEND NUTZEN!
+    
+    // Backend URL
+    backendUrl: 'https://eldorado-autoseller.onrender.com',
     
     // AWS Cognito Config
     cognito: {
@@ -105,7 +108,6 @@ function hideStatus(element) {
 
 // ===== M/s RANGE CALCULATOR =====
 function getMsRange(msString) {
-    // Extract number from "50 M/s" or "50-99 M/s"
     const match = msString.match(/(\d+)/);
     if (!match) return "0";
     
@@ -138,6 +140,12 @@ function getBrainrotImage(brainrotName) {
 
 // ===== AUTHENTICATION =====
 async function authenticateWithCognito(email, password) {
+    if (!CONFIG.production) {
+        return 'dev_token_' + btoa(email + ':' + Date.now());
+    }
+    
+    // TODO: Implement real Cognito authentication
+    // For now, use development token
     return 'dev_token_' + btoa(email + ':' + Date.now());
 }
 
@@ -306,7 +314,7 @@ async function fetchEldoradoPrices(items) {
             };
             
             const queryString = new URLSearchParams(queryData).toString();
-            const url = `${CONFIG.api.baseUrl}${CONFIG.api.flexibleOffers}?${queryString}`;
+            const url = `${CONFIG.backendUrl}/api/prices?${queryString}`;
             
             console.log('Fetching price for:', item.name, item.mutation, item.msRange);
             
@@ -315,8 +323,7 @@ async function fetchEldoradoPrices(items) {
                 headers: {
                     'Accept': 'application/json',
                     'Content-Type': 'application/json'
-                },
-                credentials: 'omit'
+                }
             });
             
             if (!response.ok) {
@@ -354,7 +361,7 @@ async function fetchEldoradoPrices(items) {
 DOM.fetchPricesBtn.addEventListener('click', async () => {
     DOM.fetchPricesBtn.disabled = true;
     DOM.fetchPricesBtn.innerHTML = '<div class="spinner"></div> Fetching...';
-    showToast('Hole Preise von Eldorado...', 'info');
+    showToast('Hole ECHTE Preise von Eldorado...', 'info');
     
     try {
         const prices = await fetchEldoradoPrices(STATE.items);
@@ -364,14 +371,13 @@ DOM.fetchPricesBtn.addEventListener('click', async () => {
                 item.eldoradoPrice = prices[index].lowestPrice.toFixed(2);
                 item.yourPrice = (parseFloat(prices[index].lowestPrice) - 1).toFixed(2);
             } else {
-                const basePrice = Math.floor(Math.random() * 50) + 10;
-                item.eldoradoPrice = basePrice.toFixed(2);
-                item.yourPrice = (basePrice - 1).toFixed(2);
+                item.eldoradoPrice = null;
+                item.yourPrice = null;
             }
         });
         
         renderItems();
-        showToast('Preise erfolgreich geladen!', 'success');
+        showToast('Echte Preise geladen!', 'success');
     } catch (error) {
         showToast('Fehler beim Laden der Preise: ' + error.message, 'error');
     } finally {
@@ -428,12 +434,27 @@ async function uploadItem(item) {
     console.log('Uploading offer:', offerData);
     
     try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        if (Math.random() > 0.1) {
-            return { success: true, offerId: 'sim_' + Date.now() };
-        } else {
-            throw new Error('API Error');
+        const url = `${CONFIG.backendUrl}/api/create-offer`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                token: STATE.authToken,
+                offerData: offerData
+            })
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || `HTTP ${response.status}`);
         }
+        
+        const result = await response.json();
+        return { success: true, offerId: result.data?.id || 'created' };
+        
     } catch (error) {
         console.error('Upload error:', error);
         throw error;
@@ -451,7 +472,7 @@ DOM.autoListBtn.addEventListener('click', async () => {
     if (noPrices.length > 0) {
         if (!confirm(`${noPrices.length} Items haben noch keine Preise. Trotzdem fortfahren?`)) return;
     }
-    if (!confirm(`${selected.length} Items auf Eldorado listen?`)) return;
+    if (!confirm(`${selected.length} Items ECHT auf Eldorado listen?`)) return;
     
     DOM.progressCard.style.display = 'block';
     DOM.autoListBtn.disabled = true;
@@ -469,7 +490,7 @@ DOM.autoListBtn.addEventListener('click', async () => {
         DOM.progressLogs.scrollTop = DOM.progressLogs.scrollHeight;
     }
     
-    addLog('🚀 Starting upload...', 'info');
+    addLog('🚀 Starting REAL upload to Eldorado...', 'info');
     addLog(`📊 Total items: ${total}`, 'info');
     
     for (let i = 0; i < selected.length; i++) {
@@ -481,7 +502,7 @@ DOM.autoListBtn.addEventListener('click', async () => {
             completed++; succeeded++;
             statusElement.textContent = 'Listed ✓';
             statusElement.className = 'item-status success';
-            addLog(`✅ ${item.name} successfully listed! (ID: ${result.offerId || 'N/A'})`, 'success');
+            addLog(`✅ ${item.name} successfully listed! (ID: ${result.offerId})`, 'success');
         } catch (error) {
             completed++; failed++;
             statusElement.textContent = 'Error ✗';
@@ -500,7 +521,7 @@ DOM.autoListBtn.addEventListener('click', async () => {
     if (failed > 0) addLog(`❌ Failed: ${failed} items`, 'error');
     DOM.autoListBtn.disabled = false;
     if (succeeded > 0) {
-        showToast(`${succeeded} / ${total} Items erfolgreich gelistet!`, succeeded === total ? 'success' : 'info');
+        showToast(`${succeeded} / ${total} Items ECHT auf Eldorado gelistet!`, succeeded === total ? 'success' : 'info');
     } else {
         showToast('Alle Uploads fehlgeschlagen. Siehe Logs für Details.', 'error');
     }
@@ -508,7 +529,9 @@ DOM.autoListBtn.addEventListener('click', async () => {
 
 // ===== INIT =====
 console.log('💎 Eldorado Auto-Seller loaded!');
-console.log('🔧 Running in DEVELOPMENT mode');
+console.log('🔧 Running in PRODUCTION mode');
+console.log('🌐 Backend:', CONFIG.backendUrl);
 console.log('✅ M/s Range Calculator active');
 console.log('✅ Mutation mapping active');
 console.log('✅ Price discovery configured');
+console.log('✅ Real Eldorado API integration active');
