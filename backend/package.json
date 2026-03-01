@@ -1,0 +1,18 @@
+{
+  "name": "eldorado-api-proxy",
+  "version": "1.0.0",
+  "description": "CORS proxy for Eldorado Auto-Seller",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "node-fetch": "^3.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
